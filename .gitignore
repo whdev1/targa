@@ -1,5 +1,7 @@
 banner
+dist
 .env
 __pycache__
+targa.egg-info
 test.py
 test_models
