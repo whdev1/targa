@@ -12,6 +12,7 @@ class Database:
     ) -> None:
         self._connection = _connection
     
+    @staticmethod
     async def connect(
         host: str,
         username: str,
