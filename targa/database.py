@@ -1,4 +1,4 @@
-from operator import sub
+from .model import Model
 import aiomysql
 from .errors import InitializationError, MySQLErrors, SubstError
 from typing import Dict, List, Union
@@ -10,6 +10,18 @@ class Database:
         self,
         _connection: aiomysql.Connection
     ) -> None:
+        """
+        Synchronous initialization method. Accepts an established aiomysql connection
+        and returns a targa.Database wrapping it. Not intended to be called by user code.
+
+        Parameters:
+            _connection: aiomysql.Connection
+                The established aiomysql connection to wrap
+        
+        Returns:
+            Nothing
+        """
+        
         self._connection = _connection
     
     @staticmethod
@@ -59,11 +71,56 @@ class Database:
             )
         )
 
-    def _ensure_connection(self) -> None:
+    async def _ensure_connection(self) -> None:
+        """
+        Ensures that a connection to the remote database is both established and
+        active.
+
+        Parameters:
+            None
+        
+        Returns:
+            Nothing
+        """
+
         if not self._connection:
             raise InitializationError("Database connection was never initialized")
+        else:
+            await self._connection.ping()
     
-    async def query(self, query: str, *substitutions) -> Union[List[Dict], None]:
+    async def insert(self, model_inst: Model) -> None:
+        """
+        Inserts the specified Targa model instance into the remote database as a new record.
+
+        Parameters:
+            model_inst: Model
+                The Model instance to insert into the remote database.
+        
+        Returns:
+            Nothing
+        """
+
+        # ensure that a connection is established
+        await self._ensure_connection()
+
+        # get the expected table name
+        table_name: str = model_inst._get_table_name()
+
+        # build up an INSERT INTO query making sure the escape any input data
+        query: str = f"INSERT INTO {table_name} ({', '.join(model_inst.__annotations__.keys())})\n" + \
+                     f"VALUES ("
+        for field in model_inst.__annotations__:
+            if model_inst.__dict__[field] is not None:
+                query += f"'{self._connection.escape_string(str(model_inst.__dict__[field]))}', "
+            else:
+                query += 'NULL, '
+        query = query[:-2] + ')'
+
+        # execute the query then commit the result
+        await self.query(query, _ensure_conn = False)
+        await self._connection.commit()
+    
+    async def query(self, query: str, *substitutions, _ensure_conn: bool = True) -> Union[List[Dict], None]:
         """
         Issues the specified query to the remote database and gets a list of dicts
         representing the rows that were returned. If no rows were received, None is
@@ -84,7 +141,8 @@ class Database:
         """
 
         # ensure that a connection is established
-        self._ensure_connection()
+        if _ensure_conn:
+            await self._ensure_connection()
 
         # perform any substitutions as necessary
         substitutions = [str(x) for x in substitutions]
@@ -95,7 +153,7 @@ class Database:
                 try:
                     index = query.index('?')
                 except ValueError:
-                    raise SubstError('Not enough value to substitute for in provided query')
+                    raise SubstError('Not enough values to substitute for in provided query')
                 
                 # perform a substitution for the '?' ensuring that any input strings are escaped
                 query = query[:index] + self._connection.escape_string(substitutions[n]) + query[index + 1:]
