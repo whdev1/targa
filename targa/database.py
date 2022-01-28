@@ -197,3 +197,38 @@ class Database:
                 zip(column_names, row)
             ) for row in rows
         ]
+
+    async def update(self, model_inst: Model, where_clause: str) -> None:
+        """
+        Updates the specified model in the remote database using an UPDATE statement
+        which includes the specified WHERE clause.
+
+        Parameters:
+            model_inst: Model
+                The model instance that should be updated in the remote database.
+
+            where_clause: str
+                The WHERE clause to include in the SQL statement.
+        
+        Returns:
+            Nothing
+        """
+
+        # ensure that a connection is established
+        await self._ensure_connection()
+
+        # get the table name for this model instance
+        table_name: str = model_inst._get_table_name()
+
+        # build up an update query making sure to escape any input
+        query: str = f"UPDATE {table_name}\nSET "
+        for field in model_inst.__annotations__.keys():
+            if model_inst.__dict__[field] is not None:
+                query += f"{field} = '{self._connection.escape_string(str(model_inst.__dict__[field]))}', "
+            else:
+                query += f"{field} = NULL, "
+        query = query[:-2] + '\n' + where_clause + ';'
+    
+        # execute the query then commit the result
+        await self.query(query, _ensure_conn = False)
+        await self._connection.commit()
