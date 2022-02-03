@@ -1,4 +1,5 @@
 from typing import Iterable, Optional
+from .keys import _PK
 
 class Model:
     def __init__(self, **kwargs) -> None:
@@ -22,18 +23,24 @@ class Model:
         
         # loop over all of the fields defined in the derived class
         for field in self.__annotations__.keys():
+            # get the anticipated type of the field based on its annotation
+            expected_type = self.__annotations__[field]
+
             # ensure that the field was provided in the constructor and that it doesn't have
             # a default value already provided
             if field not in kwargs.keys() and field not in self.__dict__.keys():
                 raise AttributeError(
                     f"No value provided for field '{field}' of model {self.__class__.__name__}."
                 )
-            
-            # type check the field based on its annotation
-            expected_type = self.__annotations__[field]
 
+            # check for a PK[T] annotation and unwrap one if necessary
+            if isinstance(expected_type, _PK):
+                # extract the type from the PK annotation
+                expected_type = expected_type._type
+
+            # check if the provided object is of the expected type
             if kwargs[field].__class__ != expected_type:
-                # check for an Optional[x] or Union[x, None] annotation
+                # check for an Optional[T] or Union[T, None] annotation
                 if hasattr(expected_type, '__args__') and expected_type.__args__[-1] == type(None):
                     # if this an Optional typing, check if the provided object is None. if not,
                     # it is invalid

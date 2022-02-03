@@ -1,3 +1,4 @@
+from .keys import _PK
 from .model import Model
 import aiomysql
 from .errors import InitializationError, MySQLErrors, SubstError
@@ -198,7 +199,7 @@ class Database:
             ) for row in rows
         ]
 
-    async def update(self, model_inst: Model, where_clause: str) -> None:
+    async def update(self, model_inst: Model, where_clause: str = None) -> None:
         """
         Updates the specified model in the remote database using an UPDATE statement
         which includes the specified WHERE clause.
@@ -207,12 +208,31 @@ class Database:
             model_inst: Model
                 The model instance that should be updated in the remote database.
 
-            where_clause: str
-                The WHERE clause to include in the SQL statement.
+            where_clause: str = None
+                The WHERE clause to include in the SQL statement. Optional if a primary key
+                was annotated in this model.
         
         Returns:
             Nothing
         """
+
+        # if no WHERE clause was provided, generate one based on a provided primary key annotation
+        if not where_clause:
+            # derive a list of annotation types
+            annotation_types: List[type] = [type(x[1]) for x in model_inst.__annotations__.items()]
+
+            # get the index of the first primary key annotation
+            pk_field_index: int = annotation_types.index(_PK)
+
+            # check that a primary key annotation was actually found
+            pk_field: str
+            if pk_field_index >= 0:
+                pk_field = list(model_inst.__annotations__.keys())[pk_field_index]
+            else:
+                raise KeyError('A WHERE clause is required if a primary key was not annotated')
+
+            # if it was, generate the WHERE clause
+            where_clause = f"WHERE {pk_field} = '{self._connection.escape_string(model_inst.__dict__[pk_field])}'"
 
         # ensure that a connection is established
         await self._ensure_connection()
