@@ -232,7 +232,7 @@ class Database:
                 raise KeyError('A WHERE clause is required if a primary key was not annotated')
 
             # if it was, generate the WHERE clause
-            where_clause = f"WHERE {pk_field} = '{self._connection.escape_string(model_inst.__dict__[pk_field])}'"
+            where_clause = f"WHERE {pk_field} = '{self._connection.escape_string(str(model_inst.__dict__[pk_field]))}'"
 
         # ensure that a connection is established
         await self._ensure_connection()
