@@ -44,7 +44,7 @@ class Model:
                 if hasattr(expected_type, '__args__') and expected_type.__args__[-1] == type(None):
                     # if this an Optional typing, check if the provided object is None. if not,
                     # it is invalid
-                    if kwargs[field]:
+                    if kwargs[field] and kwargs[field].__class__ != expected_type.__args__[0]:
                         raise TypeError(
                             f"Invalid object of type '{kwargs[field].__class__.__name__}' " +
                             f"provided for field '{field}' of type '{expected_type.__name__}'"
