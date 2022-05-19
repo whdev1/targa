@@ -3,13 +3,13 @@ import setuptools
 setup(
   name = 'targa',
   packages = ['targa', 'targa.errors'],
-  version = '1.0.4',
+  version = '1.0.5',
   license='MIT',
   description = 'A lightweight async Python library for MySQL queries and modeling.',
   author = 'whdev1',
   author_email = 'whdev1@protonmail.com',
   url = 'https://github.com/whdev1/targa',
-  download_url = 'https://github.com/whdev1/targa/archive/refs/tags/v1.0.4.tar.gz',
+  download_url = 'https://github.com/whdev1/targa/archive/refs/tags/v1.0.5.tar.gz',
   keywords = ['Targa', 'SQL', 'MySQL', 'async'],
   install_requires=['aiomysql'],
   classifiers=[

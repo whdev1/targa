@@ -89,6 +89,20 @@ class Database:
         else:
             await self._connection.ping()
     
+    async def escape(self, raw_string: str) -> str:
+        """
+        Escapes the specified raw string.
+
+        Parameters:
+            raw_string: str
+                The str to escape
+        
+        Returns:
+            A str containing the escaped version of the raw string.
+        """
+
+        return self._connection.escape_string(str(raw_string))
+    
     async def insert(self, model_inst: Model) -> None:
         """
         Inserts the specified Targa model instance into the remote database as a new record.
